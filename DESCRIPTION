@@ -1,0 +1,26 @@
+Package: analysisPipeline
+Type: Package
+Title: Combined analysis pipeline and tools
+Version: 0.92
+Date: 2017-03-01
+Author: Fraser Sim <fjsim@buffalo.edu>
+Maintainer: Fraser Sim <fjsim@buffalo.edu>
+Depends: Biobase, RColorBrewer, gplots, AnnotationDbi
+Suggests: 
+ affy, affycoretools,
+ lattice, rgl, 
+ annaffy, GOstats, topGO, 
+ limma,
+ genefilter, PGSEA, GSEABase, graph, KEGGgraph, Rgraphviz,
+ bioDist,
+ ROC, pROC, verification,
+ biomaRt, annotationTools,
+ hgu95av2.db, hgu133plus2.db, methods,
+ org.Hs.eg.db, org.Mm.eg.db, org.Rn.eg.db, org.Bt.eg.db, org.Gg.eg.db,
+ hom.Hs.inp.db, hom.Mm.inp.db, hom.Rn.inp.db, 
+ XML,
+ mouse4302.db
+Description: This package provides a series of master functions to allow easy access to a complex analysis pipeline. Updated to provide support for R 3.3.2 and Bioconductor. 
+License: GPL (>= 2)
+LazyLoad: yes
+URL: http://findDB.org

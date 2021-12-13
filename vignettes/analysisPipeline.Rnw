@@ -1,0 +1,610 @@
+% NOTE -- ONLY EDIT THE .Rnw FILE!!!  The .tex file is
+% likely to be overwritten.
+%
+% \VignetteIndexEntry{analysisPipeline Overview}
+% \VignetteDepends{analysisPipeline}
+% \VignetteDepends{}
+% \VignetteKeywords{Expression Analysis, Postprocessing}
+% \VignettePackage{analysisPipeline}
+\SweaveOpts{keep.source=TRUE, eps = FALSE}
+\documentclass[11pt]{article}
+
+\usepackage[authoryear,round]{natbib}
+\usepackage{hyperref}
+\usepackage{times}
+\usepackage{comment}
+\usepackage{rotating}
+
+\parindent 0.5in
+
+\newcommand{\Robject}[1]{{\texttt{#1}}}
+\newcommand{\Rfunction}[1]{{\texttt{#1}}}
+\newcommand{\Rpackage}[1]{{\textit{#1}}}
+\newcommand{\Rfunarg}[1]{\textit{#1}}
+
+\bibliographystyle{plainnat}
+
+\begin{document}
+
+\title{\bf Using analysisPipeline}
+
+\author{Fraser J. Sim}
+
+\maketitle
+
+\section{Overview}
+
+This package is a combination of several `wrapper' functions that enable
+complex analysis and visualization of gene expression without excessive
+re-coding of repetitive functions.
+
+The package was originally designed based of data from Affymetrix
+GeneChips and Illumina BeadArrays.
+
+This package extends a series of concepts introduced in
+\Rpackage{affycoretools}, \Rpackage{ROC}, \Rpackage{PGSEA}, and others.
+
+\section{Introduction}
+
+The \Rpackage{analysisPipeline} package was written to facilitate the easy, rapid
+and complete analysis of microarray data. Analysis has been performed with a
+variety of datasets. The only requirement being that data is loaded
+into an ExpressionSet object and that an annotation package is
+available and installed.
+
+\section{Initial data loading}
+
+For the vignette examples, the primary data was generated and
+published in \citet{Sim:2006}. This is available for download
+from NCBI geo at \url{http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE26535}.
+
+The experiment is a simple comparison of human glial progenitors
+sorted on the basis of A2B5 antigen expression
+(labelled {\bf A2B5}) against unsorted human white matter dissociated cells (labelled
+{\bf uns}).
+
+Gene expression analysis was perfomed using Affymertrix U95av2 chips. Affymetrix microarray
+data is usally loaded usually using \Rpackage{affy} or an equivalent.
+
+The global variable \Robject{chipAnnotation} is used by numerous functions in the
+\Rpackage{analyisPipeline} package. This variable should be set immediately
+after loading array data.
+
+<<eval=false>>=
+# load data
+library(affy)
+eset.complete <- justRMA()
+# setup chipAnnotation global variable
+chipAnnotation <- annotation(eset.complete)
+# export pData for editing outside R
+write.csv(pData(eset.complete), file = 'pData.csv')
+@
+
+Following initial loading and pre-processing of data, we generate and
+then edit a simple text file ``pData.csv''
+file to further annotate each array, and specify sample groupings and
+other metadata. We use the \Robject{phenotype} column to specify
+default groupings used throughout the \Rpackage{analysisPipeline}
+package. This file is edited in an external program such as Microsoft Excel and
+returned to R.
+
+<<eval=false>>=
+pData(eset.complete) <- read.csv('pData.csv')
+sampleNames(eset.complete) <- pData(eset.complete)$sampleNames
+@
+
+In our typical Affymetrix pipeline, we use \Rpackage{farms} to remove the
+non-informative probe sets from the Expression Set
+object. \Rpackage{farms} is a unsupervised filtering technique that
+utilizes the expression value of all probes in a probe set across all
+experimental samples to determine whether a probe set contains usefull data
+\citet{Talloen:2007}. In the code below, first the distribution of informative
+and non-informative probes are plotted and then the \Robject{ExpressionSet}
+object is filtered.
+
+<<eval=false>>=
+# perform FARMS to identify informative probes
+library(farms)
+affyBatch <- ReadAffy()
+eset.farms <- qFarms(affyBatch)
+INIs = INIcalls(eset.farms)
+
+All_probes = featureNames(eset.farms)
+I_probes = getI_ProbeSets(INIs)
+
+plot(INIs)
+title("Informative/Noninformative ProbeSet distribution")
+legend("topleft",paste("uninformative\n",
+ sprintf("%.0f%%",(1-length(I_probes)/length(All_probes))*100)),
+ ,bty = "n")
+legend("topright",paste("informative\n",
+ sprintf("%.0f%%",length(I_probes)/length(All_probes)*100)),
+ ,bty = "n")
+
+eset <- eset.complete[I_probes,]
+@
+
+<<load, echo=false, results = hide>>=
+options(width = 70)
+library("analysisPipeline")
+data(eset)
+chipAnnotation <- annotation(eset)
+@
+
+To define groups within the experiment, we use the `phenotype'
+column. In this example, there are two groups {\bf A2B5} and {\bf uns}.
+
+<<>>=
+pData(eset)
+@
+
+In this example, we now load the pre-normalized and filtered data using 'data(eset)'.
+
+<<eval=false>>=
+data(eset)
+chipAnnotation <- annotation(eset)
+@
+
+Data exploration provides a useful way of assessing the overall data
+structure and to determine whether their are any outlying
+samples. This can be achieved in \Rpackage{analysisPipeline} using two seperate
+approaches, \Rfunction{plot3dPCA} and \Rfunction{customTree}.
+
+\begin{itemize}
+  \item \Rfunction{plot3dPCA} displays a 3d scatter plot of the principle components
+of the data (Figure~\ref{fig:3dPCA}). Each sample is represented by a
+single point and, by default, uses the \Robject{eset\$phenotype} factor to
+determine groups and coloring. The 3d plot is also diplayed in both
+\Rpackage{rgl} window which can be rotated to faciliate
+visualization. (Note: if \Rfunction{plot3dPCA} is called a second
+time, while the Rpackage{rgl} window is open, the R-plot is
+appropriately rotated so that a PDF or other file may be exported.
+  \item \Rfunction{customTree} displays the hierarchical clustering of samples
+with samples colored by groupings present in \Robject{eset\$phenotype}
+(Figure~\ref{fig:clustering}). Euclidean sample-sample distances are
+calculated between samples in the \Robject{ExpressionSet} object.
+\end{itemize}
+
+\begin{figure}
+\centering
+<<3dPCA, fig=true, width=6, height=6, echo = false>>=
+plot3dPCA(eset, addtext = sampleNames(eset))
+@
+\caption{3d PCA. This figure shows a 3 dimensional principle
+components plot of the individual RNA/array samples.}
+\label{fig:3dPCA}}
+\end{figure}
+
+\begin{figure}
+\centering
+<<Tree, fig=true, width=6, height=6, echo = false>>=
+customTree(eset)
+@
+\caption{Hierarchical clustering. This figure shows a colored
+  clustering dendrogram generated from sample-sample distances.}
+\label{fig:clustering}
+\end{figure}
+
+\section{Computing Differential Expression}
+
+Although various packages exist for determination of differentially
+expressed genes, our pipeline utilizes the package
+\Rpackage{limma}. This package is flexible and can analyze various
+experimental designs from simple to complex multivariate analyses.
+A detailed explaination of \Rpackage{limma} is beyond the scope of
+this vignette, please see the ``LIMMA User's guide''.
+
+In this example, a simple model is setup whereby the grouping defined by
+\Robject{eset\$phenotype} is used. In this experiment, with two groups, only one
+comparison or contrast can be defined - ``A2B5 vs. unsorted cells''.
+
+<<limma>>=
+library(limma)
+design = model.matrix(~-1 + eset$phenotype)
+colnames(design) <- levels(eset$phenotype)
+fit <- lmFit(eset, design)
+
+# contrast.matrix may be set up using multiple contrasts
+contrast.matrix <- makeContrasts(A2B5 - uns, levels = design)
+
+fit2 <- contrasts.fit(fit, contrast.matrix)
+fit3 <- eBayes(fit2)
+@
+
+One of the challenges of differential gene expression analysis is to
+choose appropriate statistical and fold-change cut-off values to
+select genes-of-interest. Using the \Rfunction{decideCutoffs} function
+(Figure~\ref{fig:decideCutoffs}), the user can visualize the effects
+of various p-value cutoffs and the effect of applying
+false discovery rate (FDR)-based corrections \citet{Benjamini:1995}.
+
+\begin{figure}
+\centering
+<<decideCutoffs, fig = true, width = 6, height = 6, echo = false>>=
+decideCutoffs(fit3)
+@
+\caption{decideCutoffs. These bar graphs help selection of p-value and FC cutoffs}
+\label{fig:decideCutoffs}
+\end{figure}
+
+Having selected appropriate cut-offs, the results can be parsed into a
+list object known as \Robject{contrast.details}. To do this, we use
+the \Rfunction{parseContrasts} function.
+
+<<eval = false>>=
+contrast.details <- parseContrasts(fit3, FCcutoff = 2,
+ FDRcutoff = 0.05, adjust = "fdr")
+@
+<<eval = true, echo = false>>=
+data(contrast.details)
+@
+
+This function generates comma-delimited text files in the working
+directory and populates the contrast.details list variable for
+subsequent pathway analysis (see below).
+
+We can also generate a series of heatmaps from each comparison. An
+example is shown in Figure~\ref{fig:heatmap}.
+
+<<eval = false>>=
+generateHeatMaps(eset)
+@
+<<heatmap, fig = true, width = 6, height = 6, echo = false, include = false>>=
+data <- custom.heatmap(contrast.details[[1]]$UPau$ID[1:50], eset, title = "Up regulated genes")
+@
+\begin{figure}
+\centering
+\includegraphics[width=6in]{analysisPipeline-heatmap}
+\caption{Heatmap of top 50 up-regulated genes}
+\label{fig:heatmap}
+\end{figure}
+
+\section{Pathway Analysis}
+
+In this package, pathway analysis may be performed in an automated
+process or manually following selection of custom probe lists.
+
+\subsection{Gene Ontology Summary}
+
+As our analyses have primarily been interested in genes involved in cell-cell
+signaling and cell fate regulation, the
+\Rfunction{runAutomatedGOSummary} function was developed to parse the gene lists
+into various function categories using Gene Ontology (GO) annotations.
+
+<<GOSummary>>=
+# code for runAutomatedGOSummary
+runAutomatedGOSummary(contrast.details)
+@
+
+The results are exported to comma-delimited text files. An excerpt is
+show in Table~\ref{tab:GOSummary}.
+
+<<GOSummaryTable, results = tex, echo = false>>=
+library(xtable)
+results <- read.csv("A2B5 - uns_UP_GOSummary.csv")
+results$Description <- substr(results$Description, 1, 45)
+print(xtable(results[1:40,c(2,3,4,5,7,11)], caption="GOSummary", label="tab:GOSummary"),include.rownames=F,
+      floating.environment = 'sidewaystable', size="\\small")
+@
+
+\subsection{Hypergeometric testing}
+
+Over-representation analysis of Gene Ontology and KEGG databases can
+be performed using \Rfunction{runAutomatedHyperG}. This performs
+hypergeometric testing of all gene lists using the elim alogrithm from
+the \Rpackage{topGO} package (p < 0.01), and by hypergeometric testing
+using KEGG database pathways (p < 0.05).
+
+The results are exported to comma-delimited text files for offline
+viewing (csv files).
+
+<<eval=false>>=
+# code for runAutomatedHyperG
+contrast.HyperG <- runAutomatedHyperG(eset, contrast.details)
+@
+
+In this analysis, 26 GO Biological Process Terms were significantly
+over-represented in A2B5-sorted cells (see Table~\ref{tab:topGO} for
+a partial list).
+
+<<topGOTable, results = tex, echo = false>>=
+data(results)
+print(xtable(results.topGO[1:10,c(2:7)], caption="topGO results", label="tab:topGO"),
+      include.rownames = FALSE, size="\\tiny")
+@
+
+To further examine the enrichment of genes in a given GO Term across
+the enture gene expression profile, ROC analysis was performed on the
+one of the top 10 terms - ``central nervous system development''. See
+(Figure~\ref{fig:ROC}).
+
+<<GOroc, width = 6, height = 6, include = false>>=
+gs.EG <- unlist(mget("GO:0007417", org.Hs.egGO2ALLEGS))
+ROCresults <- plotROC(gs.EG, fit3, coef = 1,
+  main = "Enrichment of CNS development genes\n(GO:0007417)")
+@
+\begin{figure}
+\centering
+<<fig = true, echo = false, results = hide>>=
+<<GOroc>>
+@
+\caption{ROC curve of GO term enrichment.}
+\label{fig:ROC}
+\end{figure}
+
+The function \Rfunction{runAutomatedHyperG} performs hypergeometric testing on
+all KEGG pathways. The results are similarly exported to csv files. An
+example of KEGG pathway analysis results is shown in Table~\ref{tab:KEGGTable}.
+
+<<KEGGTable, results = tex, echo = false>>=
+# read in results
+print(xtable(results.KEGG[1:10,c(2:8)], caption="KEGGHyperG results", label="tab:KEGGTable"),
+      include.rownames= FALSE, size="\\tiny")
+@
+
+The top KEGG pathway - ``Neuroactive ligand-receptor interaction
+pathway'' - was plotted on a heatmap to further investigate which genes were
+significantly regulated (Figure~\ref{fig:KEGGheatmap}).
+
+\begin{figure}
+\centering
+<<KEGGheatmap, fig = true, width = 6, height = 6, echo = false>>=
+# find probes in Neuroactive ligand-receptor interaction pathway
+poi <- contrast.details[["A2B5 - uns"]]$UP$ID
+poi <- poi[poi %in% unlist(mget("04080", hgu95av2PATH2PROBE))]
+data <- custom.heatmap(poi, eset,
+                       title = "Neuroactive ligand-receptor\ninteraction")
+@
+\caption{KEGG pathway. Only significantly up-regulated genes are shown.}
+\label{fig:KEGGheatmap}
+\end{figure}
+@
+
+These approaches can be easily applied to much more complex data sets
+using the same simple functions \Rfunction{runAutomatedGOSummary} and
+\Rfunction{runAutomatedHyperG}.
+
+\section{Gene set enrichment analysis}
+
+In addition to over-representation analysis on differentially
+expressed genes, the \Rpackage{analysisPipeline} package also
+encorporates parametric gene set enrichment analysis (PGSEA), as
+described in \citet{Kim:2005} and provided as an R package in
+\Rpackage{PGSEA}.
+
+This function automates the process of performing parametric gene set
+enrichment (PGSEA) on a number of bioinformatics databases. Using
+\Rfunction{PGSEA} as the basis for gene set enrichment and
+\Rpackage{limma} to calculate significance based on the experimental
+design specified in \Robject{design}. (Note: See documentation of
+\Rfunction{run.GSEA} for details on individual
+GSEA analysis). The following GeneSetCollections are analyzed in turn
+to identify enriched/depleted GeneSets:
+\begin{enumerate}
+ \item bioCarta - data parsed from \url{www.bioCarta.com}
+ \item broadC2
+ \item broadC3
+ \item GO
+ \item KEGG
+\end{enumerate}
+
+BroadC2 and C3 databases refer to the mSigDb maintained at the Broad
+Institute and available for download from
+\url{http://www.broadinstitute.org/gsea/msigbdb/index.jsp}. The database was
+originally published in \citet{Subramanian:2005}.
+
+Using the global variable \Rfunction{design} which contains a
+\Rpackage{limma} design matrix. Limma is performed to identify
+enrichent GeneSets. Significantly regulated GeneSets are returned and
+a heatmap of relative enrichment of significant genesets is generated
+and saved as a PDF file.
+
+This can be called using the wrapper function
+\Rfunction{runAutomatedGSEA}.
+
+<<GSEA, eval = false>>=
+# code for runAutomatedGSEA
+runAutomatedGSEA(selCoef = "A2B5 - uns",
+                 refSample = "uns", blnPrompt = TRUE)
+@
+
+For brevity in this vignette, only bioCarta GSEA analysis is performed.
+
+<<bioCarta, eval = true, echo = false>>=
+selCoef = 1
+refSample = "uns"
+library(GSEABase)
+library(genefilter)
+if (!exists("nsF")) {
+ nsF <- nsFilter(eset, var.filter = FALSE)$eset
+}
+if (!exists("EG")) {
+ probes <- featureNames(nsF)
+ syms <- as.character(unlist(mget(probes, eval(parse(text = paste(chipAnnotation,
+  "SYMBOL", sep = ""))))))
+ EG <- as.character(unlist(mget(probes, eval(parse(text = paste(chipAnnotation,
+  "ENTREZID", sep = ""))))))
+}
+cat("Biocarta GSEA analysis running...\n")
+data(bioCarta)
+featureNames(nsF) = EG
+GeneIDUniverse = unique(EG)
+gsl = list()
+for (i in 1:length(PathwayIDs)) {
+ selected.Pathway = InteractionMap[InteractionIDs %in%
+  PathwayMap[[i]]$Interactions]
+ nodes.molecules = unique(as.character(unlist(sapply(selected.Pathway,
+  function(n) c(n$inputs, n$agents, n$outputs, n$inhibitors)))))
+ pathway.geneIDs = intersect(unique(unlist(sapply(MoleculeMap[nodes.molecules],
+  function(n) n$GeneID))), GeneIDUniverse)
+ gs = list(GeneSet(setName = PathwayNames[i], geneIds = as.character(pathway.geneIDs),
+   geneIdType = EntrezIdentifier(), shortDescription = PathwayIDs[i]))
+ gsl = c(gsl, gs)
+}
+gsc = GeneSetCollection(gsl)
+featureNames(nsF) = EG
+PGSEA.sig = run.GSEA(nsF = nsF, gsc = gsc, refSample = refSample,
+ file = "Biocarta_GSEA.PDF", blnPrompt = blnPrompt, range = c(5, 500),
+ coef = selCoef, pval = 0.05, adjmethod = 'none')
+write.csv(PGSEA.sig, file = "Biocarta_GSEA.csv")
+featureNames(nsF) = probes
+@
+
+Following completion of GSEA, a new directory is created which
+contains all of the results files generated during the analysis. For
+all GSEAs, a heatmap is produced using \Rpackage{PGSEA} to visualize
+significantly regulated gene sets in each database. For example, the
+bioCarta GSEA heatmap is shown in Figure~\ref{fig:bioCartaGSEA}.
+
+\begin{figure}
+\centering
+\makebox[0in]{\includegraphics[width=7in]{BioCarta_GSEA.pdf}}
+\caption{bioCarta GSEA. This heatmap shows the relative enrichment and
+depletion of bioCarta pathways in each sample (enriched in red,
+depleted in blue). Only pathways significantly regulated are shown in
+this heatmap.}
+\label{fig:bioCartaGSEA}
+\end{figure}
+
+In addition for bioCarta and KEGG pathways, a graphical representation
+of enriched gene sets is generated using \Rpackage{Rgraphviz}. For
+example the most significant bioCarta pathway is shown as a graph in
+Figure~\ref{fig:bioCartaPathway}, and as a gene-expression heatmap
+(Figure~\ref{fig:bioCartaHeatmap}).
+
+\begin{figure}
+\centering
+<<bioCartaPathway, fig = true, echo = false>>=
+i = 1
+pathway = which(PathwayNames == PGSEA.sig$ID[i])
+bioCarta.plot(pathway, fit3$coefficients[fit3$genes[,1] %in% probes, selCoef])
+@
+\caption{bioCartaPathway. Selected bioCarta pathways can be visualized
+using bioCarta.plot. The relative expression of individual genes in
+nodes is shown by the fill color; green representing down-regulation
+and red up-regulation in the profile of interest.}
+\label{fig:bioCartaPathway}
+\end{figure}
+
+\begin{figure}
+\centering
+<<bioCartaHeatmap, fig = true, echo = false>>=
+data <- bioCarta.heatmap(pathway, nsF)
+@
+\caption{bioCartaHeatmap}
+\label{fig:bioCartaHeatmap}
+\end{figure}
+
+For Broad mSigDB-based GSEA databases, the csv results files are
+annotated with additional details regarding each data set.
+
+\section{Other functions}
+
+\subsection{KEGG pathway visualization}
+
+To assist in the visualization of KEGG pathways, the
+\Rpackage{analysisPipeline} package contains the \Rfunction{KEGG.plot} function
+which generates a graph representing a selected KEGG pathway. If the
+\Rfunarg{ratios} argument is specified then nodes representing genes
+or groups of genes are colored according to gene expression levels.
+
+An example is shown in Figure~\ref{fig:KEGGplot}.
+
+<<KEGGplot, width = 6, height = 6, include=false>>=
+ratios <- fit3$coefficients[,1]
+results <- KEGG.plot("04012",ratios,chipAnnotation)
+@
+
+\begin{figure}
+\centering
+<<fig=true,echo=false>>=
+<<KEGGplot>>
+@
+\caption{KEGGplot. This figure shows a graphical representation of the
+KEGG - Hedgehog signaling pathway.}
+\label{fig:KEGGplot}
+\end{figure}
+
+\subsection{Homology mapping functions}
+
+To facilitate cross-species analysis, there are several functions
+available to convert between NCBI Entrez Gene identifiers.
+
+\begin{center}
+\begin{tabular} { l l l }
+  \hline
+  Function & From & To \\
+  \hline
+  \Rfunction{convertMouseToHumanGeneID.R} & Mouse & Human \\
+  \Rfunction{convertHumanToMouseGeneID.R} & Human & Mouse \\
+  \Rfunction{convertRatToHumanGeneID.R} & Rat & Human \\
+  \Rfunction{convertHumanToRatGeneID.R} & Human & Rat \\
+  \Rfunction{convertBovineToHumanGeneID.R} & Bovine & Human \\
+  \Rfunction{convertHumanToBovineGeneID.R} & Human & Bovine \\
+  \hline
+\end{tabular}
+\end{center}
+
+These functions by default use Ensembl and Bioconductor homology
+packages. To enable \Rpackage{annotationTools} package functionality
+\citet{Kuhn:2008}, see examples in the help page for
+\Rfunction{setupFindHomologs}.
+
+In the follow example, we ask whether mouse oligodendrocyte
+progenitor expressed genes are enriched in the human
+A2B5\textsuperscript{+} cell vs. Unsorted cell profiles. First
+we load the list of probe sets identified in \citet{Cahoy:2008}
+as oligodendrocyte progenitor expressed.
+
+<<mouseROC>>=
+# load data
+data(mouseOPC)
+mouseOPC[1:5]
+@
+
+\Robject{mouseOPC} contains a character vector of significant probe
+sets for the Affymetrix mouse 430 2.0 microarray. We next annotate these
+probe sets to mouse NCBI Entrez GeneIDs, remove unannotated genes and
+then use \Rfunction{convertMouseToHumanGeneID} to easily convert these
+to their human homologs.
+
+<<mouseROC2>>=
+# find mouse annotations
+library(mouse4302.db)
+mouseOPC.MmEG <- unlist(mget(mouseOPC, mouse4302ENTREZID,
+                             ifnotfound = NA))
+mouseOPC.MmEG <- mouseOPC.MmEG[!is.na(mouseOPC.MmEG)]
+# convert to human annotation
+mouseOPC.HsEG <- convertMouseToHumanGeneID(mouseOPC.MmEG)
+@
+
+Using \Rfunction{plotROC}, the relative enrichment of these mouse
+oligodendrocyte progenitor genes can be visualized (Figure~\ref{fig:mouseROC}).
+
+<<mouseROC3, width = 6, height = 6, include = FALSE >>=
+# plot ROC curve
+ROCresults <- plotROC(mouseOPC.HsEG, fit3, coef = 1,
+ main = "Enrichment of mouse OPCs genes in human A2B5 profile")
+@
+
+\begin{figure}
+\centering
+<<fig=true,echo=false,results=hide>>=
+<<mouseROC3>>
+@
+\caption{mouse OPCs gene enrichment in human profile}
+\label{fig:mouseROC}
+\end{figure}
+
+\section{Conclusion}
+
+The \Rpackage{analysisPipeline} package provides a unified workflow
+for the analysis of gene expression data from data exploration through
+to complex pathway analysis and visualization in an accesible
+form. The package was designed to be flexible for complex experiments and
+easy to learn to enable complex analysis by relative beginners to
+R/Bioconductor.
+
+\bibliography{analysisPipeline.bib}
+
+\end{document}

@@ -1,0 +1,13 @@
+export(bioCarta.heatmap, bioCarta.plot, calculateGOHyperG, calculateKEGGHyperG, custom.heatmap,
+ customTree, decideCutoffs, findDOWN, findUP, generateHeatMaps,
+ getDescriptionFromProbeset, getGeneIDFromProbeset, getProbesetFromGeneID, getProbesetFromSymbol,
+ getSymbolFromProbeset, GOSummary, heatmapCol, heatmapCol_stretch, KEGG.plot,
+ marker.heatmap, parseContrasts, plot3dPCA, run.GSEA, runAutomatedGOSummary,
+ runAutomatedGSEA, runAutomatedHyperG, topGO, setupFindHomologs,
+ convertBovineToHumanGeneID, convertMouseToHumanGeneID, convertRatToHumanGeneID,
+ convertHumanToBovineGeneID, convertHumanToMouseGeneID, convertHumanToRatGeneID,
+ convertChickenToHumanGeneID, convertPorcineToHumanGeneID,
+ plotROC, plotROCwithCI, ROC.compare2gs, ROC.compare2coef)
+
+import(Biobase, RColorBrewer, gplots, AnnotationDbi) 
+
