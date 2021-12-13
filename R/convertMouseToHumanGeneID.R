@@ -70,34 +70,34 @@ function(MmEG, verbose = F) {
   }, error = function(e) { if(verbose) cat(conditionMessage(e)) else cat("e") } )
  }
 
- # Bioconductor-based
- if (any(export == 0)) {
-  require("org.Mm.eg.db")
-  MmENSP = mget(MmEG[export == 0], org.Mm.egENSEMBLPROT, ifnotfound = NA)
-  MmENSP = sapply(MmENSP[!is.na(MmENSP)], function(x) {x[1]}) # select first match only 
-  require("hom.Mm.inp.db")
-  tryCatch({
-   if (length(MmENSP) == 0) stop("No MmENSP.")
-   HsENSP = mget(MmENSP, hom.Mm.inpHOMSA, ifnotfound = NA)
-   HsENSP = sapply(HsENSP[!is.na(HsENSP)], function(x) {x[1]}) # select first match only
-   HsENSP 
-   if (length(HsENSP) == 0) stop("No new BioC homologs found.")
-   require("org.Hs.eg.db")
-   HsEG = mget(HsENSP, org.Hs.egENSEMBLPROT2EG, ifnotfound = NA)
-   HsEG = sapply(HsEG, function(x) {x[1]}) # select first match only
-   HsEG = HsEG[!is.na(HsEG)]
-   HsEG = HsEG[isUnique(HsEG)]
-   # match up Human to Mouse results 
-   names(HsEG) = names(MmENSP)[MmENSP %in% names(HsENSP)[HsENSP %in% names(HsEG)]]
-   HsEG = HsEG[!is.na(names(HsEG))]
-   # remove would be duplicate annotations
-   HsEG = HsEG[!HsEG %in% export]
-   # prepare data export
-   export[names(export) %in% names(HsEG)] = HsEG
-   if(verbose) cat(" bioC: ",sum(names(export) %in% names(HsEG)))
-   cat(".")
-  }, error = function(e) { if(verbose) cat(conditionMessage(e)) else cat("e") } )
- } 
+ # Bioconductor-based - depreciated
+ # if (any(export == 0)) {
+ #  require("org.Mm.eg.db")
+ #  MmENSP = mget(MmEG[export == 0], org.Mm.egENSEMBLPROT, ifnotfound = NA)
+ #  MmENSP = sapply(MmENSP[!is.na(MmENSP)], function(x) {x[1]}) # select first match only 
+ #  require("hom.Mm.inp.db")
+ #  tryCatch({
+ #   if (length(MmENSP) == 0) stop("No MmENSP.")
+ #   HsENSP = mget(MmENSP, hom.Mm.inpHOMSA, ifnotfound = NA)
+ #   HsENSP = sapply(HsENSP[!is.na(HsENSP)], function(x) {x[1]}) # select first match only
+ #   HsENSP 
+ #   if (length(HsENSP) == 0) stop("No new BioC homologs found.")
+ #   require("org.Hs.eg.db")
+ #   HsEG = mget(HsENSP, org.Hs.egENSEMBLPROT2EG, ifnotfound = NA)
+ #   HsEG = sapply(HsEG, function(x) {x[1]}) # select first match only
+ #   HsEG = HsEG[!is.na(HsEG)]
+ #   HsEG = HsEG[isUnique(HsEG)]
+ #   # match up Human to Mouse results 
+ #   names(HsEG) = names(MmENSP)[MmENSP %in% names(HsENSP)[HsENSP %in% names(HsEG)]]
+ #   HsEG = HsEG[!is.na(names(HsEG))]
+ #   # remove would be duplicate annotations
+ #   HsEG = HsEG[!HsEG %in% export]
+ #   # prepare data export
+ #   export[names(export) %in% names(HsEG)] = HsEG
+ #   if(verbose) cat(" bioC: ",sum(names(export) %in% names(HsEG)))
+ #   cat(".")
+ #  }, error = function(e) { if(verbose) cat(conditionMessage(e)) else cat("e") } )
+ # } 
 
  cat("done.", ceiling(sum(export != 0)/length(export)*100) , "% annotated.\n")
  if(verbose) if(anyDuplicated(export[export != 0])) warning("Duplicate annotations!")

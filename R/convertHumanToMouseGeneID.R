@@ -56,30 +56,30 @@ function(HsEG, verbose = F) {
   }, error = function(e) { if(verbose) cat(conditionMessage(e)) else cat("e") } )
  }
 
- # Bioconductor-based
- if (any(export == 0)) {
-  require("org.Hs.eg.db")
-  HsENSP = mget(HsEG[export == 0], org.Hs.egENSEMBLPROT, ifnotfound = NA)
-  HsENSP = sapply(HsENSP[!is.na(HsENSP)], function(x) {x[1]}) # select first match only 
-  require("hom.Hs.inp.db")
-  tryCatch({
-   if (length(HsENSP) == 0) stop("No HsENSP.")
-   MmMGI = mget(HsENSP, hom.Hs.inpMUSMU, ifnotfound = NA)
-   MmMGI = sapply(MmMGI[!is.na(MmMGI)], function(x) {x[1]}) # select first match only
-   if (length(MmMGI) == 0) stop("No MmMGI.")   
-   require("org.Mm.eg.db")
-   MmEG = mget(MmMGI, org.Mm.egMGI2EG, ifnotfound = NA)
-   MmEG = sapply(MmEG, function(x) {x[1]}) # select first match only
-   MmEG = MmEG[!is.na(MmEG)]
-   # match up Human to Mouse results 
-   names(MmEG) = names(HsENSP)[HsENSP %in% names(MmMGI)[MmMGI %in% names(MmEG)]]
-   MmEG = MmEG[!is.na(names(MmEG))]
-   # prepare data export
-   export[names(export) %in% names(MmEG)] = MmEG
-   if(verbose) cat(sum(names(export) %in% names(MmEG)))
-   cat(".")
-  }, error = function(e) { if(verbose) cat(conditionMessage(e)) else cat("e") } )
- }
+ # Bioconductor-based - depreciated
+ # if (any(export == 0)) {
+ #  require("org.Hs.eg.db")
+ #  HsENSP = mget(HsEG[export == 0], org.Hs.egENSEMBLPROT, ifnotfound = NA)
+ #  HsENSP = sapply(HsENSP[!is.na(HsENSP)], function(x) {x[1]}) # select first match only 
+ #  require("hom.Hs.inp.db")
+ #  tryCatch({
+ #   if (length(HsENSP) == 0) stop("No HsENSP.")
+ #   MmMGI = mget(HsENSP, hom.Hs.inpMUSMU, ifnotfound = NA)
+ #   MmMGI = sapply(MmMGI[!is.na(MmMGI)], function(x) {x[1]}) # select first match only
+ #   if (length(MmMGI) == 0) stop("No MmMGI.")   
+ #   require("org.Mm.eg.db")
+ #   MmEG = mget(MmMGI, org.Mm.egMGI2EG, ifnotfound = NA)
+ #   MmEG = sapply(MmEG, function(x) {x[1]}) # select first match only
+ #   MmEG = MmEG[!is.na(MmEG)]
+ #   # match up Human to Mouse results 
+ #   names(MmEG) = names(HsENSP)[HsENSP %in% names(MmMGI)[MmMGI %in% names(MmEG)]]
+ #   MmEG = MmEG[!is.na(names(MmEG))]
+ #   # prepare data export
+ #   export[names(export) %in% names(MmEG)] = MmEG
+ #   if(verbose) cat(sum(names(export) %in% names(MmEG)))
+ #   cat(".")
+ #  }, error = function(e) { if(verbose) cat(conditionMessage(e)) else cat("e") } )
+ # }
 
  cat("done.", ceiling(sum(export != 0)/length(export)*100) , "% annotated.\n")
  return(export)
