@@ -25,6 +25,7 @@
 \bibliographystyle{plainnat}
 
 \begin{document}
+\SweaveOpts{concordance=TRUE}
 
 \title{\bf Using analysisPipeline}
 
@@ -172,7 +173,7 @@ plot3dPCA(eset, addtext = sampleNames(eset))
 @
 \caption{3d PCA. This figure shows a 3 dimensional principle
 components plot of the individual RNA/array samples.}
-\label{fig:3dPCA}}
+\label{fig:3dPCA}
 \end{figure}
 
 \begin{figure}
@@ -410,7 +411,9 @@ runAutomatedGSEA(selCoef = "A2B5 - uns",
 
 For brevity in this vignette, only bioCarta GSEA analysis is performed.
 
-<<bioCarta, eval = true, echo = false>>=
+The PGSEA package is no longer offered (August 2022). The following code is no longer valid.
+
+<<bioCarta, eval = false, echo = false>>=
 selCoef = 1
 refSample = "uns"
 library(GSEABase)
@@ -458,7 +461,6 @@ bioCarta GSEA heatmap is shown in Figure~\ref{fig:bioCartaGSEA}.
 
 \begin{figure}
 \centering
-\makebox[0in]{\includegraphics[width=7in]{BioCarta_GSEA.pdf}}
 \caption{bioCarta GSEA. This heatmap shows the relative enrichment and
 depletion of bioCarta pathways in each sample (enriched in red,
 depleted in blue). Only pathways significantly regulated are shown in
@@ -474,7 +476,7 @@ Figure~\ref{fig:bioCartaPathway}, and as a gene-expression heatmap
 
 \begin{figure}
 \centering
-<<bioCartaPathway, fig = true, echo = false>>=
+<<bioCartaPathway, eval=false, echo = false>>=
 i = 1
 pathway = which(PathwayNames == PGSEA.sig$ID[i])
 bioCarta.plot(pathway, fit3$coefficients[fit3$genes[,1] %in% probes, selCoef])
@@ -488,7 +490,7 @@ and red up-regulation in the profile of interest.}
 
 \begin{figure}
 \centering
-<<bioCartaHeatmap, fig = true, echo = false>>=
+<<bioCartaHeatmap, eval = false, echo = false>>=
 data <- bioCarta.heatmap(pathway, nsF)
 @
 \caption{bioCartaHeatmap}
