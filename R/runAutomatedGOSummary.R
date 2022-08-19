@@ -6,13 +6,13 @@ function(contrast.details) {
  ligands <<- as.character(get("GO:0005102",
   eval(parse(text = paste(chipAnnotation,"GO2ALLPROBES",sep="")))))
  # Receptors 
- receptors <<- as.character(get("GO:0004872",
+ receptors <<- as.character(get("GO:0038023",
   eval(parse(text = paste(chipAnnotation,"GO2ALLPROBES",sep="")))))
  # Transcription Factors 
  TFs <<- as.character(get(c("GO:0006355","GO:0030528", "GO:0003677"),
   eval(parse(text = paste(chipAnnotation,"GO2ALLPROBES",sep="")))))
  # ECM 
- ECM <<- as.character(get(c("GO:0005578", "GO:0007155"),
+ ECM <<- as.character(get(c("GO:0031012", "GO:0007155"),
   eval(parse(text = paste(chipAnnotation,"GO2ALLPROBES",sep="")))))
  # Enzymes
  Enzymes <<- as.character(get(c("GO:0003824","GO:0006096","GO:0016125"),

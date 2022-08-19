@@ -28,21 +28,25 @@ plotROC <-
  truth <- (EG %in% gs.EG) * 1
  data <- fit3$coefficients[probes,coef]
  if (depletion) data = data * -1
- require(ROC)
- roc <- rocdemo.sca(truth, data,
-  markerLabel = "mL", caseLabel = "cL")
- if(add == FALSE) {
-  plot(roc, line=TRUE, ylab = "sensitivity", xlab = "(1 - specificity)", ...)
-  lines(c(0,1),c(0,1), col = "red")
-  abline(v=pAUCthreshold, col = "black", lty = 2) 
-  legend("bottomright",paste("  AUC = ",round(ROC::AUC(roc),digits = 2),
-   "\npAUC = ", round(ROC::pAUC(roc, pAUCthreshold), digits = 3)), box.lty = 0, bty = 'n')
-  title(main)
- } else {
-  plot(roc, line=TRUE, add = T, ...)
- }
+ require(pROC)
+#roc <- rocdemo.sca(truth, data,
+#  markerLabel = "mL", caseLabel = "cL")
+ rocobj <- plot.roc(truth, data, direction = "<", identity.col = 'red',
+                    lwd = 1, ci = FALSE, print.auc = TRUE,
+                    main = main, ...)
+ 
+ # next section disabled (Aug 2022)
+ # if(add == FALSE) {
+ #  plot(roc, line=TRUE, ylab = "sensitivity", xlab = "(1 - specificity)", ...)
+ #  lines(c(0,1),c(0,1), col = "red")
+ #  abline(v=pAUCthreshold, col = "black", lty = 2) 
+ #  legend("bottomright",paste("  AUC = ",round(ROC::AUC(roc),digits = 2),
+ #   "\npAUC = ", round(ROC::pAUC(roc, pAUCthreshold), digits = 3)), box.lty = 0, bty = 'n')
+ #  title(main)
+ # } else {
+ #  plot(roc, line=TRUE, add = T, ...)
+ # }
 
- return(list(AUC = ROC::AUC(roc), pAUC = ROC::pAUC(roc, pAUCthreshold),
-  truth = truth, data = data))
+ return(list(AUC = auc(rocobj), pAUC = auc(rocobj, partial.auc = c(1,1 - pAUCthreshold)) ))
 }
 
